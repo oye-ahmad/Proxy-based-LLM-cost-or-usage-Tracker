@@ -6,6 +6,9 @@
 
 ---
 
+<img width="1895" height="898" alt="image" src="https://github.com/user-attachments/assets/bdad19be-2dee-475c-bd42-145ddb75850e" />
+
+
 ## 🌍 Real-World Use Case: Why PulseProxy AI?
 
 Imagine you run a multi-feature SaaS application (**SaaSify**) with 3 distinct AI-powered features:
