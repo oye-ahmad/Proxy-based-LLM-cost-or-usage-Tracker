@@ -8,6 +8,9 @@
 
 <img width="1895" height="898" alt="image" src="https://github.com/user-attachments/assets/bdad19be-2dee-475c-bd42-145ddb75850e" />
 
+<img width="1886" height="782" alt="image" src="https://github.com/user-attachments/assets/3272af60-606e-4765-be63-fe364b17c4dc" />
+
+
 
 ## 🌍 Real-World Use Case: Why PulseProxy AI?
 
