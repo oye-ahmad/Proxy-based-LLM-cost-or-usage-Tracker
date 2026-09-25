@@ -1,69 +1,66 @@
-# ⚡ LLM Usage & Cost Tracker Proxy
+# ⚡ PulseProxy AI
 
-A high-performance, proxy-based LLM cost control, latency monitoring, and semantic caching engine — built for production Edge runtimes.
+> **Smart Edge Gateway, Semantic Caching & Real-Time Cost Intelligence Engine for LLMs**
 
-Point your existing LLM SDKs (OpenAI, Groq, Anthropic, OpenRouter) to this proxy with a single line `baseURL` change to instantly unlock real-time token tracking, response caching, cost attribution by feature/user, rate-limiting, and budget enforcement alerts.
-
----
-
-## 🌟 Key Features & Advantages
-
-- **⚡ Instant Response Caching (Upstash Redis)**: 
-  Identical prompts are served directly from Redis in **~15ms** at **$0.00 cost**, saving up to 60%+ on LLM API bills.
-- **🏷️ Granular Cost Attribution (`X-Feature` & `X-User`)**:
-  Tag requests with headers like `X-Feature: support-bot` or `X-User: org_123` to track exact costs per product feature or tenant.
-- **📊 Real-Time Realtime Dashboard**:
-  Live streaming of all incoming requests, latencies, cache status, and aggregated spend trends via Supabase Realtime WebSockets.
-- **🛡️ Rate Limiting & Abuse Prevention**:
-  Sliding-window rate limiting per project API key prevents runaway scripts or malicious API abuse.
-- **🚨 Automated Budget Alerts**:
-  Set daily spending limits per project (`daily_budget_usd`). Triggers automated email notifications via Resend when limits are exceeded.
-- **🌐 Provider & Model Agnostic**:
-  Works out of the box with OpenAI, Groq, Anthropic, OpenRouter, or self-hosted LLM endpoints.
+**PulseProxy AI** is a production-ready, ultra-fast Edge proxy built on Next.js 14, Upstash Redis, and Supabase. It sits between your applications and upstream LLM providers (OpenAI, Groq, Anthropic, OpenRouter) to deliver **sub-20ms semantic caching ($0 token cost)**, **feature-level cost attribution**, **sliding-window rate limiting**, and **real-time budget enforcement**.
 
 ---
 
-## 🏗️ Architecture
+## 🌍 Real-World Use Case: Why PulseProxy AI?
 
-```
-[ Your Frontend / Mobile App / Backend ]
-                │
-                │  1. HTTP Request (with Bearer Key & X-Feature Header)
-                ▼
-      ┌──────────────────┐
-      │  Next.js Edge    │ ── 2. Check Rate Limits & SHA-256 Cache (Upstash Redis)
-      │  Proxy Server    │ ── Cache HIT? ──> Return Response Immediately ($0 cost, ~15ms)
-      └──────────────────┘
-                │
-                │ Cache MISS?
-                ▼ 3. Forward to Upstream LLM (OpenAI / Groq)
-      ┌──────────────────┐
-      │ Upstream Provider│ ── 4. Calculate Tokens & Pricing, Cache in Redis
-      └──────────────────┘
-                │
-                ▼ 5. Log Request to Supabase DB (Pushes to Live Dashboard)
-```
+Imagine you run a multi-feature SaaS application (**SaaSify**) with 3 distinct AI-powered features:
+1. 💬 **Customer Support Chatbot** (`X-Feature: support-bot`)
+2. 📄 **Document Summarizer** (`X-Feature: doc-summarizer`)
+3. 🤖 **Internal Slack Assistant** (`X-Feature: slack-bot`)
+
+Without **PulseProxy AI**, you face major production pain points:
+- **No Cost Visibility**: Providers like OpenAI send one total bill at the end of the month. You have no idea which feature or tenant is burning your budget.
+- **Wasted Token Spend**: Users repeatedly ask identical questions ("*What are your business hours?*"), forcing you to pay full LLM token prices over and over.
+- **Vulnerability to Abuse**: A single runaway loop or malicious bot can drain your credit balance in minutes.
 
 ---
 
-## 💻 Integration Examples
+### 💡 How PulseProxy AI Solves This in Production
 
-### Node.js / TypeScript (OpenAI SDK)
+#### 1. Instant Response Caching (Sub-20ms Latency & $0 Cost)
+- **User A** asks: *"What is your refund policy?"* ➔ Forwarded to LLM. Latency: `1,800 ms`, Cost: `$0.003`.
+- **User B** asks 2 minutes later: *"What is your refund policy?"*
+- **PulseProxy AI** intercepts the request at the Edge, matches the SHA-256 prompt signature in Upstash Redis, and returns the response in **15 ms** at **$0.00 cost**!
+- **Result**: **100% token cost savings** on duplicate requests and near-instant user responses.
 
-Change only the `baseURL` and pass your project API key:
+#### 2. Feature & User Cost Attribution (`X-Feature` & `X-User`)
+- By sending headers like `X-Feature: doc-summarizer` and `X-User: acme_corp`, your dashboard live-aggregates costs per feature and tenant.
+- **Result**: You discover `doc-summarizer` consumes 85% of your API budget, allowing you to price your premium tiers accurately.
+
+#### 3. Automated Rate Limiting & Abuse Safeguards
+- If a client or bot floods 300 requests/minute, PulseProxy AI's sliding window rate-limiter blocks them with HTTP `429 Too Many Requests`.
+- **Result**: Protects your upstream API keys from unexpected $1,000+ monthly bill spikes.
+
+#### 4. Automated Daily Budget Threshold Alerts
+- Set a daily budget limit (`daily_budget_usd = $10.00`). If spend reaches the cap, an automated webhook fires an instant notification to your email via Resend.
+
+---
+
+## 🚀 1-Line Code Integration
+
+Simply change your SDK's `baseURL` to point to your live proxy—no complex refactoring needed:
+
+### TypeScript / Node.js (OpenAI SDK)
 
 ```typescript
 import OpenAI from "openai";
 
 const openai = new OpenAI({
-  baseURL: "https://your-deployed-proxy.vercel.app/api/proxy/v1",
-  apiKey: "proj_live_xxxxxx", // Project API key generated in tracker dashboard
+  // Point to your live PulseProxy AI endpoint
+  baseURL: "https://your-pulseproxy.vercel.app/api/proxy/v1",
+  apiKey: "proj_live_xxxxxx", // Project API key generated in your dashboard
   defaultHeaders: {
-    "X-Feature": "customer-support-bot",
-    "X-User": "tenant_company_abc"
+    "X-Feature": "support-bot",
+    "X-User": "tenant_acme_corp"
   }
 });
 
+// Standard API call — works seamlessly!
 const response = await openai.chat.completions.create({
   model: "qwen/qwen3.8-27b",
   messages: [{ role: "user", content: "Explain quantum computing in one sentence." }]
@@ -78,103 +75,82 @@ console.log(response.choices[0].message.content);
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="https://your-deployed-proxy.vercel.app/api/proxy/v1",
+    base_url="https://your-pulseproxy.vercel.app/api/proxy/v1",
     api_key="proj_live_xxxxxx",
     default_headers={
-        "X-Feature": "data-pipeline",
+        "X-Feature": "doc-summarizer",
         "X-User": "user_456"
     }
 )
 
 response = client.chat.completions.create(
     model="gpt-4o-mini",
-    messages=[{"role": "user", "content": "Summarize today's logs."}]
+    messages=[{"role": "user", "content": "Summarize today's analytics."}]
 )
 ```
 
-### cURL
+---
 
-```bash
-curl -X POST "https://your-deployed-proxy.vercel.app/api/proxy/v1/chat/completions" \
-  -H "Authorization: Bearer proj_live_xxxxxx" \
-  -H "X-Feature: dashboard-demo" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "qwen/qwen3.8-27b",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'
+## 🏗️ System Architecture
+
+```
+[ Your Frontend / Mobile App / Microservice ]
+                      │
+                      │  1. HTTP Request (with Bearer Key & X-Feature Header)
+                      ▼
+            ┌──────────────────┐
+            │  Next.js Edge    │ ── 2. Check Rate Limits & SHA-256 Cache (Upstash Redis)
+            │  Proxy Server    │ ── Cache HIT? ──> Return Response Immediately ($0 cost, ~15ms)
+            └──────────────────┘
+                      │
+                      │ Cache MISS?
+                      ▼ 3. Forward to Upstream LLM (OpenAI / Groq)
+            ┌──────────────────┐
+            │ Upstream Provider│ ── 4. Calculate Tokens & Pricing, Cache in Redis
+            └──────────────────┘
+                      │
+                      ▼ 5. Log Request to Supabase DB (Pushes to Live Realtime Dashboard)
 ```
 
 ---
 
-## 🛠️ Stack
+## 🌐 Deploying to Vercel (Step-by-Step)
 
-- **Proxy Engine**: Next.js 14 (Edge Functions)
+### 1. Import Repository
+1. Go to **[Vercel](https://vercel.com)** and log in with GitHub.
+2. Click **Add New...** ➔ **Project** and select `Proxy-based-LLM-cost-or-usage-Tracker`.
+
+### 2. Configure Environment Variables
+Copy over the environment variables from your local `.env`:
+
+| Key | Description |
+| :--- | :--- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Public Anon Key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Service Role Key |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST Token |
+| `UPSTREAM_BASE_URL` | Upstream provider URL (`https://api.openai.com/v1` or `https://api.groq.com/openai/v1`) |
+| `UPSTREAM_API_KEY` | Your master OpenAI / Groq API Key |
+| `RESEND_API_KEY` *(optional)* | Resend API Key for budget email notifications |
+| `ALERT_TO_EMAIL` *(optional)* | Recipient email address for alerts |
+
+### 3. Deploy
+Click **Deploy**. Vercel will build your Edge function proxy and assign a live production URL:
+`https://your-pulseproxy.vercel.app/api/proxy/v1`
+
+---
+
+## 🛠️ Stack & Tech Specs
+
+- **Proxy Engine**: Next.js 14 (Edge Runtime)
 - **Database**: Supabase Postgres (with Realtime WebSockets)
-- **Cache & Rate Limiter**: Upstash Redis REST
-- **Styling & UI**: TailwindCSS + Recharts
-- **Email Alerts**: Resend API
-
----
-
-## ⚙️ Environment Variables
-
-Create a `.env` file in the root directory (refer to `.env.example`):
-
-```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="your_supabase_anon_key"
-SUPABASE_SERVICE_ROLE_KEY="your_supabase_service_role_key"
-
-# Upstash Redis Configuration
-UPSTASH_REDIS_REST_URL="https://your-instance.upstash.io"
-UPSTASH_REDIS_REST_TOKEN="your_upstash_redis_token"
-
-# Upstream Provider Configuration
-UPSTREAM_BASE_URL="https://api.openai.com/v1"
-UPSTREAM_API_KEY="your_upstream_provider_api_key"
-
-# Optional Budget Alert Configuration
-RESEND_API_KEY="re_your_resend_api_key"
-ALERT_TO_EMAIL="admin@yourdomain.com"
-```
-
----
-
-## 🚀 Running Locally
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/oye-ahmad/Proxy-based-LLM-cost-or-usage-Tracker.git
-   cd Proxy-based-LLM-cost-or-usage-Tracker
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Set up database schema**:
-   Run `schema.sql` and `supabase/schema_views.sql` inside your Supabase project's SQL Editor.
-
-4. **Start local development server**:
-   ```bash
-   npm run dev
-   ```
-   Open **[http://localhost:3000](http://localhost:3000)** in your browser.
-
----
-
-## 🌐 Production Deployment (Vercel)
-
-1. Push your repository to GitHub.
-2. Import the repository into **[Vercel](https://vercel.com)**.
-3. Configure the environment variables in Vercel project settings.
-4. Deploy! Your edge proxy endpoint will be live at `https://your-app.vercel.app/api/proxy/v1`.
+- **Cache & Rate Limiting**: Upstash Redis REST
+- **UI & Analytics**: TailwindCSS + Recharts
+- **Email Notifications**: Resend API
 
 ---
 
 ## 📄 License
 
-MIT License. Feel free to use, modify, and deploy for your own applications.
+MIT License. Free to use, modify, and deploy for production applications.
